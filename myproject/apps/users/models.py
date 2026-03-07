@@ -97,6 +97,12 @@ class User(Document):
     is_verified = BooleanField(default=False)
     email_verified_at = DateTimeField()
 
+    # compatibility with Django auth
+    @property
+    def is_authenticated(self):
+        """Always True for authenticated users (required by DRF throttling)."""
+        return True
+
     # Timestamps
     last_login = DateTimeField()
     created_at = DateTimeField(default=datetime.utcnow)
