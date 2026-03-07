@@ -38,13 +38,13 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'apps.users',
-    'apps.products',
-    'apps.categories',
-    'apps.orders',
-    'apps.reviews',
-    'apps.inventory',
-    'apps.cart',
-    'apps.payments',
+    # 'apps.products',
+    # 'apps.categories',
+    # 'apps.orders',
+    # 'apps.reviews',
+    # 'apps.inventory',
+    # 'apps.cart',
+    # 'apps.payments',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -105,6 +105,7 @@ mongoengine.connect(
     alias='default',
 )
 
+
 # ─────────────────────────────────────────────
 # AUTHENTICATION — JWT
 # ─────────────────────────────────────────────
@@ -134,7 +135,7 @@ SIMPLE_JWT = {
 # ─────────────────────────────────────────────
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'apps.users.authentication.MongoEngineJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -298,13 +299,6 @@ LOGGING = {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'maxBytes': 10485760,  # 10MB
-            'backupCount': 5,
-            'formatter': 'verbose',
         },
     },
     'root': {
