@@ -17,6 +17,9 @@ urlpatterns = [
 
     # Health check
     path('api/health/', include('config.health')),
+
+    # Products
+    path('api/products/', include('apps.products.urls')),
 ]
 
 if settings.DEBUG:
