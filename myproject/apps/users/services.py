@@ -57,3 +57,34 @@ def get_user_from_token_payload(payload: dict) -> Optional[User]:
         return User.objects(id=user_id, is_active=True).first()
     except Exception:
         return None
+
+
+def add_address(user: User, address_data: dict) -> User:
+    from .models import Address
+    addr = Address(**address_data)
+    if addr.is_default:
+        for a in user.addresses:
+            a.is_default = False
+    user.addresses.append(addr)
+    user.save()
+    return user
+
+
+def remove_address(user: User, idx: int) -> User:
+    if 0 <= idx < len(user.addresses):
+        user.addresses.pop(idx)
+    user.save()
+    return user
+
+
+def toggle_wishlist(user: User, product_id: str) -> Tuple[User, bool]:
+    """Returns (user, added). added=True means just added, False=removed."""
+    pid = str(product_id)
+    if pid in user.wishlist:
+        user.wishlist.remove(pid)
+        added = False
+    else:
+        user.wishlist.append(pid)
+        added = True
+    user.save()
+    return user, added
