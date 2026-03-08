@@ -135,5 +135,8 @@ media/
 # Nginx logs
 nginx/logs/
 
+# Gunicorn control socket (created at runtime)
+gunicorn.ctl
+
 # Freeze directory (if present)
 freeze/
