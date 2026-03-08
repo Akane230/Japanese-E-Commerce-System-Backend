@@ -14,7 +14,7 @@ from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer,
     UserProfileSerializer, ChangePasswordSerializer, AddressSerializer
 )
-from .services import authenticate_user, get_tokens_for_user
+from .services import authenticate_user, get_tokens_for_user, toggle_wishlist, add_address
 
 logger = logging.getLogger(__name__)
 
@@ -115,3 +115,69 @@ def change_password(request):
     user.set_password(serializer.validated_data['new_password'])
     user.save()
     return success_response(message='Password changed successfully.')
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    """GET /api/auth/me — current user profile"""
+    user = get_mongo_user(request)
+    if not user:
+        return Response({'success': False, 'message': 'User not found.'}, status=404)
+
+    return success_response(UserProfileSerializer(user).data)
+
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    """PUT /api/auth/profile"""
+    user = get_mongo_user(request)
+    if not user:
+        return Response({'success': False, 'message': 'User not found.'}, status=404)
+
+    serializer = UserProfileSerializer(user, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response({'success': False, 'errors': serializer.errors}, status=400)
+
+    updated_user = serializer.update(user, serializer.validated_data)
+    return success_response(UserProfileSerializer(updated_user).data, message='Profile updated.')
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def add_address_view(request):
+    """POST /api/auth/addresses"""
+    user = get_mongo_user(request)
+    serializer = AddressSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({'success': False, 'errors': serializer.errors}, status=400)
+
+    user = add_address(user, serializer.validated_data)
+    return success_response(
+        [a.to_dict() for a in user.addresses],
+        message='Address added.',
+        status_code=201
+    )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def remove_address_view(request, idx):
+    """DELETE /api/auth/addresses/<idx>"""
+    user = get_mongo_user(request)
+    if idx >= len(user.addresses):
+        return Response({'success': False, 'message': 'Address not found.'}, status=404)
+    user.addresses.pop(idx)
+    user.save()
+    return success_response([a.to_dict() for a in user.addresses], message='Address removed.')
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_wishlist_view(request, product_id):
+    """POST /api/auth/wishlist/<product_id>"""
+    user = get_mongo_user(request)
+    user, added = toggle_wishlist(user, product_id)
+    return success_response(
+        {'wishlist': user.wishlist, 'added': added},
+        message='Wishlist updated.'
+    )
