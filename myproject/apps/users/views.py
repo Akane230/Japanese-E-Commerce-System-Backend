@@ -9,12 +9,16 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.cart.services import CART_SESSION_KEY
+
 from .models import User
 from .serializers import (
     UserRegistrationSerializer, UserLoginSerializer,
     UserProfileSerializer, ChangePasswordSerializer, AddressSerializer
 )
 from .services import authenticate_user, get_tokens_for_user, toggle_wishlist, add_address
+from apps.cart.services import merge_carts, get_session_cart, get_or_create_user_cart
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +67,6 @@ def register(request):
 @permission_classes([AllowAny])
 @throttle_classes([AuthRateThrottle])
 def login(request):
-    """POST /api/auth/login"""
     serializer = UserLoginSerializer(data=request.data)
     if not serializer.is_valid():
         return Response({'success': False, 'errors': serializer.errors}, status=400)
@@ -77,6 +80,15 @@ def login(request):
             'success': False,
             'message': 'Invalid email or password.',
         }, status=401)
+
+    
+    session_cart = get_session_cart(request)
+    if session_cart:  # Guest has items in cart
+        user_cart = get_or_create_user_cart(str(user.id))
+        merge_carts(session_cart, user_cart)
+        # Clear session cart after merge
+        request.session[CART_SESSION_KEY] = {}
+        request.session.modified = True
 
     tokens = get_tokens_for_user(user)
     profile = UserProfileSerializer(user)

@@ -23,6 +23,9 @@ urlpatterns = [
 
     # Categories
     path('api/categories/', include('apps.categories.urls')),
+
+    # Cart
+    path('api/cart/', include('apps.cart.urls')),
 ]
 
 if settings.DEBUG:
