@@ -43,7 +43,7 @@ LOCAL_APPS = [
     # 'apps.orders',
     # 'apps.reviews',
     # 'apps.inventory',
-    # 'apps.cart',
+    'apps.cart',
     # 'apps.payments',
 ]
 
