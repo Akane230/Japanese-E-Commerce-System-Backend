@@ -20,6 +20,9 @@ urlpatterns = [
 
     # Products
     path('api/products/', include('apps.products.urls')),
+
+    # Categories
+    path('api/categories/', include('apps.categories.urls')),
 ]
 
 if settings.DEBUG:
