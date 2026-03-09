@@ -1,6 +1,6 @@
 from datetime import datetime
 from mongoengine import (
-    Document, EmbeddedDocument, StringField, BooleanField,
+    Document, EmbeddedDocument, EmbeddedDocumentField, StringField, BooleanField,
     DateTimeField, ListField, IntField, URLField, ObjectIdField
 )
 
@@ -28,8 +28,8 @@ class Category(Document):
     depth = IntField(default=0)                  # 0=root, 1=child, 2=grandchild
 
     # Media
-    image_url = URLField()
-    banner_url = URLField()
+    image_url = URLField(null=True)
+    banner_url = URLField(null=True)
 
     # Display
     display_order = IntField(default=0)
