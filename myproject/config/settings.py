@@ -38,8 +38,8 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'apps.users',
-    # 'apps.products',
-    # 'apps.categories',
+    'apps.products',
+    'apps.categories',
     # 'apps.orders',
     # 'apps.reviews',
     # 'apps.inventory',
