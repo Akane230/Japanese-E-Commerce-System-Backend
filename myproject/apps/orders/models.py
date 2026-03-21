@@ -61,33 +61,42 @@ class ShippingAddress(EmbeddedDocument):
 class PaymentInfo(EmbeddedDocument):
     method = StringField(
         max_length=30,
-        choices=['card', 'paypal', 'gcash', 'bank_transfer', 'cod'],
+        choices=['gcash', 'bank_transfer', 'cod', 'maya', 'instapay', 'other'],
         required=True
     )
     status = StringField(
         max_length=20,
-        choices=['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
+        choices=['pending', 'payment_pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
         default='pending'
     )
-    provider = StringField(max_length=30)          # stripe, paypal
-    transaction_id = StringField(max_length=200)   # Provider transaction/charge ID
-    payment_intent_id = StringField(max_length=200)
+    # Manual payment fields
+    transaction_id = StringField(max_length=200)    # Customer's reference number
+    proof_url = StringField(max_length=1000)        # Screenshot/receipt URL
+    submitted_at = DateTimeField()                  # When customer submitted proof
+    confirmed_by = StringField(max_length=100)      # Admin user_id who confirmed
+    confirmed_at = DateTimeField()                  # When admin confirmed
+    provider = StringField(max_length=30, default='manual')
     amount = DecimalField(precision=2)
     currency = StringField(max_length=3, default='USD')
     paid_at = DateTimeField()
     refunded_at = DateTimeField()
     refund_amount = DecimalField(precision=2)
+    refund_reference = StringField(max_length=200)  # Reference of refund transfer
     failure_reason = StringField(max_length=500)
 
     def to_dict(self):
         return {
             'method': self.method,
             'status': self.status,
-            'provider': self.provider,
             'transaction_id': self.transaction_id,
+            'proof_url': self.proof_url,
+            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
+            'confirmed_at': self.confirmed_at.isoformat() if self.confirmed_at else None,
             'amount': float(self.amount) if self.amount else None,
             'currency': self.currency,
             'paid_at': self.paid_at.isoformat() if self.paid_at else None,
+            'refunded_at': self.refunded_at.isoformat() if self.refunded_at else None,
+            'refund_amount': float(self.refund_amount) if self.refund_amount else None,
         }
 
 
