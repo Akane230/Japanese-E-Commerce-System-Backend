@@ -33,19 +33,23 @@ THIRD_PARTY_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'django_ratelimit',
+    # 'django_ratelimit',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 LOCAL_APPS = [
     'apps.users',
     'apps.products',
     'apps.categories',
-    # 'apps.orders',
-    # 'apps.reviews',
-    # 'apps.inventory',
+    'apps.orders',
+    'apps.reviews',
+    'apps.inventory',
     'apps.cart',
-    # 'apps.payments',
+    'apps.payments',
 ]
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -128,6 +132,7 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'TOKEN_OBTAIN_SERIALIZER': 'apps.users.serializers.CustomTokenObtainPairSerializer',
+    'TOKEN_REFRESH_SERIALIZER': 'apps.users.serializers.CustomTokenRefreshSerializer',
 }
 
 # ─────────────────────────────────────────────
@@ -170,7 +175,7 @@ REST_FRAMEWORK = {
 # ─────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://localhost:3000',
+    default='http://localhost:5173,http://localhost:5174,http://localhost:3000',
     cast=Csv()
 )
 CORS_ALLOW_CREDENTIALS = True
@@ -334,3 +339,13 @@ INVENTORY_RESERVATION_TIMEOUT = 30
 ORDER_NUMBER_PREFIX = 'JP'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Cloudinary configuration (if used for media storage)
+CLOUDINARY_CLOUD_NAME = config('CLOUDINARY_CLOUD_NAME', default='')
+CLOUDINARY_API_KEY = config('CLOUDINARY_API_KEY', default='')
+CLOUDINARY_API_SECRET = config('CLOUDINARY_API_SECRET', default='')
+
+# Initialize Cloudinary if credentials are provided
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+    from config.cloudinary_config import configure_cloudinary
+    configure_cloudinary()

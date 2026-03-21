@@ -3,11 +3,27 @@ Product models — supports bilingual descriptions (EN/JA),
 multiple currencies, and international shipping.
 """
 from datetime import datetime
+from typing import Iterable
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from mongoengine import (
-    Document, EmbeddedDocument, StringField, FloatField,
-    BooleanField, DateTimeField, ListField, EmbeddedDocumentField,
-    URLField, IntField, DecimalField
+    Document,
+    EmbeddedDocument,
+    StringField,
+    FloatField,
+    BooleanField,
+    DateTimeField,
+    ListField,
+    EmbeddedDocumentField,
+    URLField,
+    IntField,
+    DecimalField,
+    FileField,
 )
+import cloudinary
+import cloudinary.uploader
+from cloudinary.models import CloudinaryField  # Keep for reference but won't use directly
 
 
 class BilingualText(EmbeddedDocument):
@@ -20,9 +36,212 @@ class BilingualText(EmbeddedDocument):
 
 
 class ProductMedia(EmbeddedDocument):
-    thumbnail = URLField()
-    images = ListField(URLField())
-    video_url = URLField()
+    """
+    Product media with Cloudinary integration.
+    Stores Cloudinary public IDs instead of URLs for flexibility.
+    """
+    thumbnail = StringField(max_length=255)  # Cloudinary public ID
+    images = ListField(StringField(max_length=255))  # List of Cloudinary public IDs
+    video_url = StringField(max_length=255)  # Cloudinary public ID for video
+    
+    def get_thumbnail_url(self, **options):
+        """Generate Cloudinary URL with transformations"""
+        if not self.thumbnail:
+            return None
+        default_options = {'width': 300, 'height': 300, 'crop': 'fill', 'quality': 'auto', 'format': 'auto'}
+        default_options.update(options)
+        return cloudinary.utils.cloudinary_url(self.thumbnail, **default_options)[0]
+    
+    def get_image_urls(self, obj):
+        image_ids = obj.images if not isinstance(obj, dict) else obj.get('images', [])
+        cloud_name = getattr(settings, 'CLOUDINARY_CLOUD_NAME', 'sample')
+        return [
+            f"https://res.cloudinary.com/{cloud_name}/image/upload/{img_id}"
+            for img_id in image_ids if img_id
+        ]
+    
+    def get_video_url(self, **options):
+        """Generate Cloudinary video URL"""
+        if not self.video_url:
+            return None
+        return cloudinary.utils.cloudinary_url(self.video_url, resource_type='video', **options)[0]
+    
+    def _validate_image_file(self, file):
+        """
+        Basic image validation for admin uploads:
+        - content type must be image/*
+        - size must not exceed configured max (default 5 MB)
+        """
+        content_type = getattr(file, 'content_type', '') or ''
+        size = getattr(file, 'size', None)
+
+        if not content_type.startswith('image/'):
+            raise ValidationError('Invalid image format. Only image uploads are allowed.')
+
+        max_bytes = getattr(settings, 'PRODUCT_IMAGE_MAX_BYTES', 5 * 1024 * 1024)
+        if size is not None and size > max_bytes:
+            raise ValidationError('Image file is too large.')
+
+    def _validate_video_file(self, file):
+        """
+        Basic video validation for admin uploads.
+        """
+        content_type = getattr(file, 'content_type', '') or ''
+        size = getattr(file, 'size', None)
+
+        if not content_type.startswith('video/'):
+            raise ValidationError('Invalid video format. Only video uploads are allowed.')
+
+        max_bytes = getattr(settings, 'PRODUCT_VIDEO_MAX_BYTES', 50 * 1024 * 1024)
+        if size is not None and size > max_bytes:
+            raise ValidationError('Video file is too large.')
+
+    def upload_thumbnail(self, file, public_id=None, **options):
+        """Upload thumbnail to Cloudinary and store public_id."""
+        from logging import getLogger
+
+        logger = getLogger(__name__)
+
+        self._validate_image_file(file)
+
+        try:
+            file_data = file
+
+            upload_options = {
+                'folder': 'products/thumbnails',
+                'resource_type': 'image',
+                'unique_filename': True,
+            }
+            upload_options.update(options)
+
+            if public_id:
+                upload_options['public_id'] = public_id
+
+            result = cloudinary.uploader.upload(file_data, **upload_options)
+            self.thumbnail = result['public_id']
+            return result
+        except ValidationError:
+            # Bubble up validation issues untouched
+            raise
+        except Exception as e:
+            logger.error(f"Cloudinary thumbnail upload error: {str(e)}")
+            raise
+    
+    def upload_image(self, file, public_id=None, **options):
+        """Upload single image to Cloudinary."""
+        from logging import getLogger
+
+        logger = getLogger(__name__)
+
+        self._validate_image_file(file)
+
+        try:
+            file_data = file
+
+            upload_options = {
+                'folder': 'products/images',
+                'resource_type': 'image',
+                'unique_filename': True,
+            }
+            upload_options.update(options)
+
+            if public_id:
+                upload_options['public_id'] = public_id
+
+            result = cloudinary.uploader.upload(file_data, **upload_options)
+
+            if not self.images:
+                self.images = []
+            self.images.append(result['public_id'])
+            return result
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Cloudinary image upload error: {str(e)}")
+            raise
+
+    def upload_images(self, files: Iterable, **options):
+        """Upload multiple images to Cloudinary."""
+        from logging import getLogger
+
+        logger = getLogger(__name__)
+
+        results = []
+        errors = []
+        for file in files:
+            try:
+                result = self.upload_image(file, **options)
+                results.append(result)
+            except ValidationError as e:
+                # Collect validation errors but continue with remaining files
+                logger.warning(f"Validation error during image upload: {e}")
+                errors.append(str(e))
+                continue
+            except Exception as e:
+                logger.error(f"Failed to upload image: {str(e)}")
+                errors.append('Upload failed')
+                continue
+
+        # If all uploads failed, raise a combined error for the caller
+        if errors and not results:
+            raise ValidationError(f"Image uploads failed: {'; '.join(errors)}")
+
+        return results
+
+    def upload_video(self, file, public_id=None, **options):
+        """Upload video to Cloudinary."""
+        from logging import getLogger
+
+        logger = getLogger(__name__)
+
+        self._validate_video_file(file)
+
+        try:
+            file_data = file
+
+            upload_options = {
+                'folder': 'products/videos',
+                'resource_type': 'video',
+                'chunk_size': 6000000,
+                'unique_filename': True,
+            }
+            upload_options.update(options)
+
+            if public_id:
+                upload_options['public_id'] = public_id
+
+            result = cloudinary.uploader.upload(file_data, **upload_options)
+            self.video_url = result['public_id']
+            return result
+        except ValidationError:
+            raise
+        except Exception as e:
+            logger.error(f"Cloudinary video upload error: {str(e)}")
+            raise
+    
+    def delete_thumbnail(self):
+        """Delete thumbnail from Cloudinary"""
+        if self.thumbnail:
+            cloudinary.uploader.destroy(self.thumbnail)
+            self.thumbnail = None
+    
+    def delete_image(self, public_id):
+        """Delete specific image from Cloudinary"""
+        if public_id in self.images:
+            cloudinary.uploader.destroy(public_id)
+            self.images.remove(public_id)
+    
+    def delete_all_images(self):
+        """Delete all images from Cloudinary"""
+        for img_id in self.images:
+            cloudinary.uploader.destroy(img_id)
+        self.images = []
+    
+    def delete_video(self):
+        """Delete video from Cloudinary"""
+        if self.video_url:
+            cloudinary.uploader.destroy(self.video_url, resource_type='video')
+            self.video_url = None
 
 
 class ProductPricing(EmbeddedDocument):
@@ -92,7 +311,7 @@ class Product(Document):
     # Bilingual content
     description = EmbeddedDocumentField(BilingualText, default=BilingualText)
 
-    # Media
+    # Media with Cloudinary
     media = EmbeddedDocumentField(ProductMedia, default=ProductMedia)
 
     # Pricing
@@ -140,3 +359,18 @@ class Product(Document):
 
     def __str__(self):
         return f'{self.name} ({self.sku})'
+    
+    def get_primary_image(self, **options):
+        """Get primary product image (first image or thumbnail)"""
+        if self.media and self.media.images:
+            return self.media.get_image_urls(limit=1, **options)[0]
+        elif self.media and self.media.thumbnail:
+            return self.media.get_thumbnail_url(**options)
+        return None
+    
+    def delete_all_media(self):
+        """Delete all Cloudinary media associated with this product"""
+        if self.media:
+            self.media.delete_thumbnail()
+            self.media.delete_all_images()
+            self.media.delete_video()
