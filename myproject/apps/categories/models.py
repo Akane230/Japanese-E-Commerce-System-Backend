@@ -21,7 +21,7 @@ class Category(Document):
     name = EmbeddedDocumentField(LocalizedName, required=True)
     slug = StringField(max_length=300, required=True, unique=True)
     description = EmbeddedDocumentField(LocalizedName)
-
+    emoji = StringField(max_length=10, null=True)
     # Hierarchy
     parent_id = StringField()                    # Parent category _id (null = root)
     ancestors = ListField(StringField())         # All ancestor _ids (for breadcrumb)

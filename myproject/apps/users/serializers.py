@@ -3,7 +3,8 @@ User serializers — registration, auth, profile management.
 """
 import re
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Address, PaymentMethod
 
 
@@ -123,11 +124,85 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """Extends JWT payload with user info."""
+    """Extends JWT payload with user info for MongoEngine User model."""
+    
+    def validate(self, attrs):
+        """
+        Validate MongoEngine user credentials.
+        attrs: dict with 'email'/'username' and 'password' keys.
+        """
+        from .services import authenticate_user
+        from django.contrib.auth.models import update_last_login
+        from rest_framework_simplejwt.authentication import JWTAuthentication
+        
+        # Support both email and username for login
+        email = attrs.get('email') or attrs.get('username')
+        password = attrs.get('password')
+        
+        if not email or not password:
+            raise serializers.ValidationError(
+                {'detail': 'Must include "email" and "password".'}
+            )
+        
+        # Authenticate using MongoEngine User model
+        user = authenticate_user(email, password)
+        if not user:
+            raise serializers.ValidationError(
+                {'detail': 'Invalid credentials.'}
+            )
+        
+        # Generate tokens for the authenticated user
+        tokens = self.get_token(user)
+        
+        return {
+            'access': str(tokens['access']),
+            'refresh': str(tokens['refresh']),
+        }
+    
     @classmethod
     def get_token(cls, user):
-        token = super().get_token(user)
-        token['username'] = user.username
-        token['email'] = user.email
-        token['is_staff'] = user.is_staff
-        return token
+        """Create JWT token for MongoEngine user."""
+        # Manually create tokens since we can't use super().get_token() 
+        # which expects Django User model
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        refresh = RefreshToken()
+        refresh['user_id'] = str(user.id)
+        refresh['username'] = user.username
+        refresh['email'] = user.email
+        refresh['is_staff'] = user.is_staff
+        
+        return {
+            'refresh': refresh,
+            'access': refresh.access_token,
+        }
+
+
+class CustomTokenRefreshSerializer(TokenRefreshSerializer):
+    """Custom token refresh serializer for MongoEngine User model."""
+    
+    def validate(self, attrs):
+        """
+        Validate refresh token for MongoEngine User.
+        The default implementation tries to use Django's User model.
+        """
+        refresh = RefreshToken(attrs['refresh'])
+        
+        data = {
+            'access': str(refresh.access_token),
+        }
+        
+        return data
+    
+
+class AdminUserSerializer(serializers.Serializer):
+    id = serializers.SerializerMethodField()
+    username = serializers.CharField(read_only=True)
+    email = serializers.EmailField(read_only=True)
+    first_name = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    last_name = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    phone_number = serializers.CharField(max_length=30, allow_blank=True, required=False)
+    is_staff = serializers.BooleanField(required=False)
+
+    def get_id(self, obj):
+        return str(obj.id)
