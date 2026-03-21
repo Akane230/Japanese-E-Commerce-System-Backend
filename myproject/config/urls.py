@@ -26,6 +26,17 @@ urlpatterns = [
 
     # Cart
     path('api/cart/', include('apps.cart.urls')),
+
+    # Orders
+    path('api/orders/', include('apps.orders.urls')),
+    path('api/payments/', include('apps.payments.urls')),
+
+    # Inventory
+    path('api/inventory/', include('apps.inventory.urls')),
+
+    # Reviews
+    path('api/reviews/', include('apps.reviews.urls')),
+    
 ]
 
 if settings.DEBUG:
