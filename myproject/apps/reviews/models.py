@@ -1,7 +1,7 @@
 from datetime import datetime
 from mongoengine import (
     Document, StringField, IntField, BooleanField,
-    DateTimeField, ListField, URLField
+    DateTimeField, ListField, URLField, ReferenceField
 )
 
 
@@ -10,7 +10,9 @@ class Review(Document):
     Product review with verified purchase validation and moderation.
     """
     product_id = StringField(required=True)
+    product = ReferenceField('Product', required=True)
     user_id = StringField(required=True)
+    user = ReferenceField('User', required=True)
     order_id = StringField()           # Links to Order for verified purchase check
 
     # Content
@@ -66,4 +68,4 @@ class Review(Document):
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'Review by user {self.user_id} on product {self.product_id} ({self.rating}★)'
+        return f'Review by user {self.user.username} on product {self.product.name} ({self.rating}★)'
