@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_product_queryset(
     category_id: Optional[str] = None,
+    category_slug: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     search: Optional[str] = None,
@@ -25,6 +26,12 @@ def get_product_queryset(
 
     if category_id:
         qs = qs.filter(category_ids=category_id)
+    elif category_slug:
+        # If category_slug is provided, find the category by slug and use its ID
+        from apps.categories.models import Category
+        category = Category.objects(slug=category_slug, is_active=True).first()
+        if category:
+            qs = qs.filter(category_ids=str(category.id))
 
     if min_price is not None:
         qs = qs.filter(pricing__base_price__gte=min_price)
