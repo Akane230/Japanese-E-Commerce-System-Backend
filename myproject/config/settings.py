@@ -175,7 +175,7 @@ REST_FRAMEWORK = {
 # ─────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:5173,http://localhost:5174,http://localhost:3000',
+    default='http://localhost:5173,http://localhost:5174,http://localhost:3000,https://japanese-e-commerce-system-frontend.vercel.app,https://japanese-e-commerce-system-admin.vercel.app',
     cast=Csv()
 )
 CORS_ALLOW_CREDENTIALS = True
