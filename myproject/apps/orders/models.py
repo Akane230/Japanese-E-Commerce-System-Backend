@@ -20,7 +20,7 @@ class OrderItem(EmbeddedDocument):
     unit_price = DecimalField(required=True, precision=2)
     quantity = IntField(required=True, min_value=1)
     subtotal = DecimalField(required=True, precision=2)
-    currency = StringField(max_length=3, default='USD')
+    currency = StringField(max_length=3, default='JPY')
 
     def to_dict(self):
         return {
@@ -77,7 +77,7 @@ class PaymentInfo(EmbeddedDocument):
     confirmed_at = DateTimeField()                  # When admin confirmed
     provider = StringField(max_length=30, default='manual')
     amount = DecimalField(precision=2)
-    currency = StringField(max_length=3, default='USD')
+    currency = StringField(max_length=3, default='JPY')
     paid_at = DateTimeField()
     refunded_at = DateTimeField()
     refund_amount = DecimalField(precision=2)
@@ -190,7 +190,7 @@ class Order(Document):
     tax_total = DecimalField(precision=2, default=0)
     discount_amount = DecimalField(precision=2, default=0)
     grand_total = DecimalField(precision=2, required=True)
-    currency = StringField(max_length=3, default='USD')
+    currency = StringField(max_length=3, default='JPY')
 
     # Coupon/promo
     coupon_code = StringField(max_length=50)

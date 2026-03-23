@@ -49,18 +49,30 @@ def get_product_queryset(
         # Basic contains search — for production use MongoDB Atlas Search
         qs = qs.filter(name__icontains=search)
 
-    # Sorting
+    # Sorting - MongoEngine supports embedded field ordering with proper syntax
     sort_map = {
         'newest': '-created_at',
         'oldest': 'created_at',
-        'price_asc': 'pricing__base_price',
-        'price_desc': '-pricing__base_price',
-        'rating': '-rating_summary__average',
-        'popular': '-rating_summary__count',
+        'price_asc': 'pricing.base_price',
+        'price_desc': '-pricing.base_price',
+        'rating': '-rating_summary.average',
+        'popular': '-rating_summary.count',
         'name': 'name',
     }
     order = sort_map.get(sort_by, sort_by)
-    qs = qs.order_by(order)
+    
+    # Handle embedded document sorting with Python since MongoEngine's order_by
+    # doesn't reliably work with nested fields
+    if 'pricing.' in order:
+        reverse = order.startswith('-')
+        field = order.lstrip('-').split('.')[1]
+        qs = sorted(qs, key=lambda x: float(getattr(x.pricing, field, 0)), reverse=reverse)
+    elif 'rating_summary.' in order:
+        reverse = order.startswith('-')
+        field = order.lstrip('-').split('.')[1]
+        qs = sorted(qs, key=lambda x: getattr(x.rating_summary, field, 0), reverse=reverse)
+    else:
+        qs = qs.order_by(order)
 
     return qs
 

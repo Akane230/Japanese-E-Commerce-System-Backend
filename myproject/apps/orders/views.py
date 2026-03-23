@@ -66,9 +66,10 @@ def create_order(request):
             shipping_address_data=data['shipping_address'],
             payment_method=data['payment_method'],
             shipping_service=data.get('shipping_service', 'standard'),
+            shipping_fee=data.get('shipping_fee'),
             coupon_code=data.get('coupon_code'),
             notes=data.get('customer_notes'),
-            currency=data.get('currency', 'USD'),
+            currency=data.get('currency', 'JPY'),
         )
     except ValueError as e:
         return err(str(e), status_code=status.HTTP_400_BAD_REQUEST)
