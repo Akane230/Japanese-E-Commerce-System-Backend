@@ -152,7 +152,7 @@ def get_enriched_cart(request):
                 'unit_price': price,
                 'quantity': quantity,
                 'subtotal': item_subtotal,
-                'currency': getattr(product.pricing, 'currency', 'USD') if product.pricing else 'USD',
+                'currency': getattr(product.pricing, 'currency', 'JPY') if product.pricing else 'JPY',
                 'in_stock': inv.is_in_stock if inv else True,
                 'max_quantity': inv.quantity_available if inv and inv.is_tracked else 99,
                 'is_available': True,

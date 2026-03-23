@@ -43,9 +43,10 @@ def create_order_from_cart(
     shipping_address_data: dict,
     payment_method: str,
     shipping_service: str = 'standard',
+    shipping_fee: Optional[Decimal] = None,
     coupon_code: Optional[str] = None,
     notes: Optional[str] = None,
-    currency: str = 'USD',
+    currency: str = 'JPY',
 ) -> Order:
     """
     Main order creation function.
@@ -108,7 +109,11 @@ def create_order_from_cart(
 
     # Calculate shipping and tax
     shipping_info = calculate_shipping(subtotal, shipping_service)
-    shipping_fee = shipping_info['fee']
+    # Use frontend-provided shipping fee if available, otherwise use calculated
+    if shipping_fee is None:
+        shipping_fee = shipping_info['fee']
+    else:
+        shipping_fee = Decimal(str(shipping_fee))
     tax_total = Decimal('0.00')   # Adjust per destination country
     discount = Decimal('0.00')   # Apply coupon logic here
     grand_total = subtotal + shipping_fee + tax_total - discount

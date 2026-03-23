@@ -84,7 +84,7 @@ class User(Document):
 
     # Location info (derived from preferred shipping address)
     preferred_locale = StringField(max_length=10, default='en')   # en, ja
-    preferred_currency = StringField(max_length=3, default='USD')
+    preferred_currency = StringField(max_length=3, default='JPY')
 
     # Embedded documents
     addresses = ListField(EmbeddedDocumentField(Address))

@@ -51,9 +51,10 @@ class OrderCreateSerializer(serializers.Serializer):
         choices=['economy', 'standard', 'express'],
         default='standard'
     )
+    shipping_fee = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     coupon_code = serializers.CharField(max_length=50, allow_blank=True, required=False)
     customer_notes = serializers.CharField(max_length=2000, allow_blank=True, required=False)
-    currency = serializers.CharField(max_length=3, default='USD')
+    currency = serializers.CharField(max_length=3, default='JPY')
 
 
 class StatusHistorySerializer(serializers.Serializer):
